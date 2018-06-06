@@ -3,7 +3,7 @@ using System.Text;
 using System.IO;
 using System.IO.Compression;
 
-namespace LightRDP.Core.Network.Engine
+namespace LightRAT.Core.Network.Engine
 {
     public static class CryptEngine
     {

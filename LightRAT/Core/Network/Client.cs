@@ -1,6 +1,6 @@
 ﻿using System.Net.Sockets;
 
-namespace LightRDP.Core.Network
+namespace LightRAT.Core.Network
 {
     public class Client
     {

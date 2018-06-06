@@ -3,14 +3,14 @@ using System.Net;
 using System.Net.Sockets;
 using System.Collections.Generic;
 
-namespace LightRDP.Core.Network
+namespace LightRAT.Core.Network
 {
     public class Server
     {
         public IPEndPoint ServerEndPoint { get; set; }
         public Socket InternalSocket { get; } = new Socket(SocketType.Stream, ProtocolType.Tcp);
         public List<Client> ConnectedClients { get; } = new List<Client>();
-
+        
         public Server()
         {
 

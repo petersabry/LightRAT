@@ -7,8 +7,8 @@
     <ProjectGuid>{84971962-1380-4F38-AF8F-63C99673AE57}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>LightRDP</RootNamespace>
-    <AssemblyName>LightRDP</AssemblyName>
+    <RootNamespace>LightRAT</RootNamespace>
+    <AssemblyName>LightRAT</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -40,7 +40,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Core\Network\Client.cs" />
     <Compile Include="Core\Network\Engine\CryptEngine.cs" />
+    <Compile Include="Core\Network\Server.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup />
