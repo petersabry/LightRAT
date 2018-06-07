@@ -57,17 +57,18 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="NetworkTests\ClientTest.cs" />
     <Compile Include="EngineTests\CryptEngineTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LightRAT\LightRAT.csproj">
       <Project>{84971962-1380-4f38-af8f-63c99673ae57}</Project>
       <Name>LightRAT</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">

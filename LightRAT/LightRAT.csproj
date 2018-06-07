@@ -42,6 +42,9 @@
   <ItemGroup>
     <Compile Include="Core\Network\Client.cs" />
     <Compile Include="Core\Network\Engine\CryptEngine.cs" />
+    <Compile Include="Core\Network\NetworkSizes.cs" />
+    <Compile Include="Core\Network\Protocol\MessageFramingProtocol.cs" />
+    <Compile Include="Core\Network\Protocol\ReceivingMode.cs" />
     <Compile Include="Core\Network\Server.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

