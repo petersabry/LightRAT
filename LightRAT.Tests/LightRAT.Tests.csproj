@@ -57,8 +57,8 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="NetworkTests\ClientTest.cs" />
     <Compile Include="EngineTests\CryptEngineTest.cs" />
+    <Compile Include="NetworkTests\ProtocolTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

