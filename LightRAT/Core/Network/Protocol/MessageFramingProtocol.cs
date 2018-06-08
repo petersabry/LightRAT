@@ -7,12 +7,12 @@ namespace LightRAT.Core.Network.Protocol
 {
     public class MessageFramingProtocol
     {
+        private int receivedData = 0;
         private byte[] bufferLength = BitConverter.GetBytes(sizeof(int));
         private ReceivingMode receivingMode = ReceivingMode.Header;
+
         private byte[] buffer;
         private int _maxBufferLength;
-        private int receivedData = 0;
-
         public event Action<byte[]> DataReceivedEvent;
 
         public MessageFramingProtocol(int maxBufferLength)
@@ -40,9 +40,9 @@ namespace LightRAT.Core.Network.Protocol
                 dataLength = Math.Min(remainingDataLength, data.Length);
             }
 
-            // if the buffer is null that means we read the header (the first of the packet)
-            // or if the receieved data doesn't equal the desired amout, we read from the start beacuse that means we received new data
-            // if not we read after the header
+            // if the buffer is null that means we will read the header (the first of the packet)
+            // or if the receieved data doesn't equal the desired amout, we will also read from the start beacuse that means we received new data
+            // if not we will read after the header
             int readingOffset = (buffer == null || (receivedData != data.Length && receivedData > 0)) ? 0 : bufferLength.Length;
 
             // Array.Copy(data, readingOffset, readingBufferHolder, 0, dataLength);
