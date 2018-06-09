@@ -1,5 +1,6 @@
 ﻿using NUnit.Framework;
-using LightRAT.Core.Network.Engine;
+using LightRAT.Core.Engine;
+using System.Text;
 
 namespace LightRAT.Tests.EngineTests
 {
@@ -11,8 +12,8 @@ namespace LightRAT.Tests.EngineTests
         {
             var sampleString = "Hello World";
 
-            var compressed = CryptEngine.Compress(sampleString);
-            var decompressed = CryptEngine.Decompress(compressed);
+            var compressed = CryptEngine.Compress(Encoding.ASCII.GetBytes(sampleString));
+            var decompressed = Encoding.ASCII.GetString(CryptEngine.Decompress(compressed));
 
             Assert.AreEqual(sampleString, decompressed);
         }

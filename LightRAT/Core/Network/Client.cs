@@ -1,7 +1,11 @@
-﻿using LightRAT.Core.Network.Engine;
+﻿using LightRAT.Core.Network.Packets;
 using LightRAT.Core.Network.Protocol;
 using System;
 using System.Net.Sockets;
+using NetSerializer;
+using LightRAT.Core.Extensions;
+using System.IO;
+using LightRAT.Core.Engine;
 
 namespace LightRAT.Core.Network
 {
@@ -14,7 +18,7 @@ namespace LightRAT.Core.Network
         public bool IsDisposed { get; private set; } = false;
         public ClientState CurrentState { get; set; }
 
-        public delegate void ReceiveDataEventHandler(string Data);
+        public delegate void ReceiveDataEventHandler(Client client, IPacket Data);
         public event ReceiveDataEventHandler ReceiveDataEvent;
 
         public delegate void StateChangeEventHandler(Client client, ClientState state);
@@ -26,42 +30,79 @@ namespace LightRAT.Core.Network
             protocol.DataReceivedEvent += MessageFraming_DataReceivedEvent;
         }
 
-        public void StartReceiving()
+        private void MessageFraming_DataReceivedEvent(byte[] receivedData)
         {
-            ClientSocket.BeginReceive(_receivingBuffer, 0, _receivingBuffer.Length, SocketFlags.None, ReceiveData, null);
+            IPacket packet = null;
+
+            using (var ms = new MemoryStream(CryptEngine.Decompress(receivedData)))
+                packet = (IPacket)Utils.LightRATUtils.packetSerializer.Deserialize(ms);
+
+            ReceiveDataEvent(this, packet);
         }
 
-        private void MessageFraming_DataReceivedEvent(byte[] obj)
+        public void StartReceive()
         {
-            var decompressed = CryptEngine.Decompress(obj);
-            ReceiveDataEvent(decompressed);
+            ClientSocket.BeginReceive(_receivingBuffer, 0, _receivingBuffer.Length, SocketFlags.None, ReceiveCallback, null);
         }
-
-        private void ReceiveData(IAsyncResult result)
+        private void ReceiveCallback(IAsyncResult result)
         {
-            try
-            {
-                ClientSocket.EndReceive(result);
-                protocol.Read(_receivingBuffer);
-                _receivingBuffer = new byte[NetworkSizes.BufferSize];
-                ClientSocket.BeginReceive(_receivingBuffer, 0, _receivingBuffer.Length, SocketFlags.None, ReceiveData, null);
-            }
-            catch (SocketException ex)
+            if (ClientSocket.EndReceive(result) > 1)
             {
                 try
                 {
-                    TryConnect();
+                    protocol.Read(_receivingBuffer);
+                    _receivingBuffer = new byte[NetworkSizes.BufferSize];
+                    ClientSocket.BeginReceive(_receivingBuffer, 0, _receivingBuffer.Length, SocketFlags.None, ReceiveCallback, null);
                 }
-                catch (Exception)
+                catch (SocketException ex)
                 {
-                    //throw;
+                    TryConnect(ex.SocketErrorCode);
                 }
             }
+            else
+            {
+                Dispose();
+            }
         }
-        private void TryConnect()
+        private void TryConnect(SocketError error)
         {
-            // TODO: Implement this
+            if (error == SocketError.TimedOut)
+            {
+                if (ClientSocket.Connected)
+                {
+                    ClientSocket.BeginReceive(_receivingBuffer, 0, _receivingBuffer.Length, SocketFlags.None, ReceiveCallback, null);
+                }
+                else
+                {
+                    Dispose();
+                }
+            }
+            else
+            {
+                Dispose();
+            }
         }
+
+        public void SendPacket(IPacket packet)
+        {
+            byte[] buffer = null;
+
+            using (var ms = new MemoryStream())
+            {
+                Utils.LightRATUtils.packetSerializer.Serialize(ms, packet);
+                buffer = ms.GetBuffer();
+            }
+
+            var compressedData = CryptEngine.Compress(buffer);
+            var framedData = MessageFramingProtocol.Frame(compressedData);
+
+            ClientSocket.BeginSend(framedData, 0, framedData.Length, SocketFlags.None, SendCallback, null);
+        }
+        private void SendCallback(IAsyncResult result)
+        {
+            ClientSocket.EndSend(result);
+        }
+
         public void Dispose()
         {
             if (!IsDisposed)

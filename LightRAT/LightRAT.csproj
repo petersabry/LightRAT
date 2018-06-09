@@ -30,6 +30,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="NetSerializer, Version=4.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NetSerializer.4.1.0\lib\net45\NetSerializer.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -40,15 +44,21 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Core\Extensions\NetSerializerExtensions.cs" />
     <Compile Include="Core\Network\Client.cs" />
-    <Compile Include="Core\Network\Engine\CryptEngine.cs" />
+    <Compile Include="Core\Network\ClientState.cs" />
+    <Compile Include="Core\Engine\CryptEngine.cs" />
     <Compile Include="Core\Network\NetworkSizes.cs" />
+    <Compile Include="Core\Network\Packets\IPacket.cs" />
     <Compile Include="Core\Network\Protocol\MessageFramingProtocol.cs" />
     <Compile Include="Core\Network\Protocol\ReceivingMode.cs" />
     <Compile Include="Core\Network\Server.cs" />
+    <Compile Include="Core\Utils\LightRATUtils.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

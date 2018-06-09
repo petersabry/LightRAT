@@ -44,8 +44,11 @@ namespace LightRAT.Core.Network.Protocol
             // or if the receieved data doesn't equal the desired amout, we will also read from the start beacuse that means we received new data
             // if not we will read after the header
             int readingOffset = (buffer == null || (receivedData != data.Length && receivedData > 0)) ? 0 : bufferLength.Length;
+           
+             // to skip the header while reading the first packet
+            dataLength = (buffer != null && receivedData == 0)? data.Length - bufferLength.Length : dataLength;
 
-            using (var bufferMemoryStream = new MemoryStream(readingBufferHolder))
+            using (var bufferMemoryStream = new MemoryStream(readingBufferHolder, receivedData, dataLength)) // to write data starting from the last index
                 using (var dataMemoryStream = new MemoryStream(data, readingOffset, dataLength, false))
                     dataMemoryStream.WriteTo(bufferMemoryStream);
 
@@ -68,14 +71,11 @@ namespace LightRAT.Core.Network.Protocol
                 receivingMode = ReceivingMode.Packet;
                 Read(data);
             }
-
-            if (receivingMode == ReceivingMode.Packet)
+            else
             {
-                if (receivedData != buffer.Length)
-                {
-                    receivedData += dataLength;
-                }
-                else
+                receivedData += dataLength;
+
+                if (receivedData == buffer.Length)
                 {
                     DataReceivedEvent(buffer);
                     Reset();

@@ -35,14 +35,14 @@ namespace LightRAT.Core.Network
                 if (ex.ErrorCode == (int)SocketError.AddressAlreadyInUse)
                     throw new InvalidOperationException("The selected port is already used by another process");
                 else
-                    throw;
+                    throw new NotSupportedException("oops unexpected error was thrown please report this issue to the developer.");
             }  
         }
         private void EndAccepting(IAsyncResult result)
         {
             var client = new Client(InternalSocket.EndAccept(result));
             AddClient(client);
-            client.StartReceiving();
+            client.StartReceive();
             InternalSocket.BeginAccept(EndAccepting, null);
         }
 
@@ -75,7 +75,7 @@ namespace LightRAT.Core.Network
                 InternalSocket.Dispose();
                 foreach (var client in ConnectedClients)
                 {
-                    client.ReceiveDataEvent -= this.ReceiveEvent;
+                    client.ReceiveDataEvent -= this.ReceiveDataEvent;
                     client.Dispose();
                 }
                 ConnectedClients = null;

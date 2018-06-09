@@ -52,19 +52,29 @@ namespace LightRAT.Tests.NetworkTests
 
             Assert.AreEqual(receivedData, data);
         }
-        [Test] //TODO: Implement this test.
+        [Test] 
         public void Read_PassingHighSizeDataWithNetworkSimulation_ReturnsTheSameData()
         {
-            //var path = Path.GetFullPath(TestContext.CurrentContext.TestDirectory) + @"\SampleTextFile_1000kb.txt";
-            //byte[] data = File.ReadAllBytes(path);
-            //byte[] framedData = MessageFramingProtocol.Frame(data);
-            //byte[] receivedData = null;
-            //var protocol = new MessageFramingProtocol(20 * 1024 * 1024);
-            //protocol.DataReceivedEvent += (recevied) => receivedData = recevied;
+            var path = Path.GetFullPath(TestContext.CurrentContext.TestDirectory) + @"\SampleTextFile_1000kb.txt";
+            byte[] data = File.ReadAllBytes(path);
+            byte[] framedData = MessageFramingProtocol.Frame(data);
+            byte[] receivedData = null;
+            var protocol = new MessageFramingProtocol(20 * 1024 * 1024);
+            protocol.DataReceivedEvent += (recevied) => receivedData = recevied;
 
-            //protocol.Read(framedData);
+            using (var ms = new MemoryStream(framedData))
+            {
+                var tempBuffer = new byte[100];
 
-            //Assert.AreEqual(receivedData, data);
+                for (int i = 100; i <= framedData.Length; i += 100)
+                {
+                    ms.Read(tempBuffer, 0, tempBuffer.Length);
+                    protocol.Read(tempBuffer);
+                    ms.Seek(i, SeekOrigin.Begin);
+                }
+            }
+
+            Assert.AreEqual(data, receivedData);
         }
     }
 }
