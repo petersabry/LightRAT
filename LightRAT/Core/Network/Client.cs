@@ -1,24 +1,21 @@
-﻿using LightRAT.Core.Network.Packets;
-using LightRAT.Core.Network.Protocol;
-using System;
-using System.Net.Sockets;
-using NetSerializer;
-using LightRAT.Core.Extensions;
+﻿using System;
 using System.IO;
+using System.Net.Sockets;
 using LightRAT.Core.Engine;
+using LightRAT.Core.Network.Protocol;
+using LightRAT.Core.Network.Packets;
 
 namespace LightRAT.Core.Network
 {
     public class Client : IDisposable
     {
-        private MessageFramingProtocol protocol = new MessageFramingProtocol(NetworkSizes.MaxPacketSize);
+        private MessageFramingProtocol _protocol = new MessageFramingProtocol(NetworkSizes.MaxPacketSize);
         private byte[] _receivingBuffer = new byte[NetworkSizes.BufferSize];
-        
-        public Socket ClientSocket { get; private set; }
-        public bool IsDisposed { get; private set; } = false;
-        public ClientState CurrentState { get; set; }
 
-        public delegate void ReceiveDataEventHandler(Client client, IPacket Data);
+        public Socket ClientSocket { get; private set; }
+        public bool IsDisposed { get; private set; }
+
+        public delegate void ReceiveDataEventHandler(Client client, IPacket packet);
         public event ReceiveDataEventHandler ReceiveDataEvent;
 
         public delegate void StateChangeEventHandler(Client client, ClientState state);
@@ -27,7 +24,7 @@ namespace LightRAT.Core.Network
         public Client(Socket socket)
         {
             ClientSocket = socket;
-            protocol.DataReceivedEvent += MessageFraming_DataReceivedEvent;
+            _protocol.DataReceivedEvent += MessageFraming_DataReceivedEvent;
         }
 
         private void MessageFraming_DataReceivedEvent(byte[] receivedData)
@@ -50,7 +47,7 @@ namespace LightRAT.Core.Network
             {
                 try
                 {
-                    protocol.Read(_receivingBuffer);
+                    _protocol.Read(_receivingBuffer);
                     _receivingBuffer = new byte[NetworkSizes.BufferSize];
                     ClientSocket.BeginReceive(_receivingBuffer, 0, _receivingBuffer.Length, SocketFlags.None, ReceiveCallback, null);
                 }
@@ -107,9 +104,10 @@ namespace LightRAT.Core.Network
         {
             if (!IsDisposed)
             {
+                StateChangeEvent?.Invoke(this, ClientState.Disconnected);
                 _receivingBuffer = null;
-                protocol.DataReceivedEvent -= MessageFraming_DataReceivedEvent;
-                protocol = null;
+                _protocol.DataReceivedEvent -= MessageFraming_DataReceivedEvent;
+                _protocol = null;
                 ClientSocket.Close();
                 ClientSocket.Shutdown(SocketShutdown.Both);
                 ClientSocket.Dispose();

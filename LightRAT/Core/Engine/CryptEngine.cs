@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text;
 using System.IO;
 using System.IO.Compression;
 
@@ -21,12 +20,14 @@ namespace LightRAT.Core.Engine
                         dataStream.CopyTo(gzipStream);
                     }
                 }
+
                 return compressedDataStream.GetBuffer();
             }
         }
+
         public static byte[] Decompress(byte[] data)
         {
-            if(data == null || data.Length == 0)
+            if (data == null || data.Length == 0)
                 throw new ArgumentNullException("the data cannot be null", nameof(data));
 
             using (var compressedDataStream = new MemoryStream(data))

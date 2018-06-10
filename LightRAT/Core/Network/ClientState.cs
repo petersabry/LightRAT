@@ -4,6 +4,6 @@
     {
         Authenticated,
         Disconnected,
-        Connected,
+        Connected
     }
 }

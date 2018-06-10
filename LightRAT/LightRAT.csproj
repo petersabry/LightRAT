@@ -44,15 +44,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Core\Data\Account.cs" />
     <Compile Include="Core\Extensions\NetSerializerExtensions.cs" />
     <Compile Include="Core\Network\Client.cs" />
     <Compile Include="Core\Network\ClientState.cs" />
     <Compile Include="Core\Engine\CryptEngine.cs" />
     <Compile Include="Core\Network\NetworkSizes.cs" />
+    <Compile Include="Core\Network\Packets\AuthenticationPacket.cs" />
     <Compile Include="Core\Network\Packets\IPacket.cs" />
     <Compile Include="Core\Network\Protocol\MessageFramingProtocol.cs" />
     <Compile Include="Core\Network\Protocol\ReceivingMode.cs" />
     <Compile Include="Core\Network\Server.cs" />
+    <Compile Include="Core\Network\ServerManagement.cs" />
     <Compile Include="Core\Utils\LightRATUtils.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

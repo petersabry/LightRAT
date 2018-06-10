@@ -1,27 +1,34 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Collections.Generic;
+using LightRAT.Core.Data;using System.Collections.Generic;
+
+using LightRAT.Core.Network.Packets;
 
 namespace LightRAT.Core.Network
 {
     public class Server : IDisposable
     {
-        private object _clientStateChangedLock = new object();
+        private readonly object _clientStateChangedLock = new object();
 
         public IPEndPoint ServerEndPoint { get; set; }
         public Socket InternalSocket { get; } = new Socket(AddressFamily.InterNetwork ,SocketType.Stream, ProtocolType.Tcp);
         public List<Client> ConnectedClients { get; private set; } = new List<Client>();
-        public bool IsDisposed { get; private set; } = false;
+        public List<Account> AllowedAccounts { get; private set; } = new List<Account>();
+        public bool IsDisposed { get; private set; }
 
+        public delegate void ReceiveDataEventHandler(Server server, Client client, IPacket packet);
+        public event ReceiveDataEventHandler ClientReceiveDataEvent;
 
-        public event Client.ReceiveDataEventHandler ReceiveDataEvent;
-        public event Client.StateChangeEventHandler StateChangeEvent;
+        public delegate void StateChangeEventHandler(Server server, Client client, ClientState state);
+        public event StateChangeEventHandler ClientStateChangeEvent;
 
-        public Server(string ip, int port)
+        public Server(string ip, int port, Account account)
         {
             ServerEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
+            AllowedAccounts.Add(account);
         }
+
         public void Start()
         {
             try
@@ -50,8 +57,8 @@ namespace LightRAT.Core.Network
         {
             lock (_clientStateChangedLock)
             {
-                client.ReceiveDataEvent += ReceiveDataEvent;
-                client.StateChangeEvent += StateChangeEvent;
+                client.ReceiveDataEvent += OnClientReceive;
+                client.StateChangeEvent += OnClientStateChange; ;
                 ConnectedClients.Add(client);
             }
         }
@@ -59,12 +66,23 @@ namespace LightRAT.Core.Network
         {
             lock (_clientStateChangedLock)
             {
-                client.ReceiveDataEvent -= ReceiveDataEvent;
-                client.StateChangeEvent -= StateChangeEvent;
+                client.ReceiveDataEvent -= OnClientReceive;
+                client.StateChangeEvent -= OnClientStateChange;
                 ConnectedClients.Remove(client);
                 client.Dispose();
             }
         }
+
+
+        private void OnClientReceive(Client client, IPacket packet)
+        {
+            ClientReceiveDataEvent?.Invoke(this, client, packet);
+        }
+        private void OnClientStateChange(Client client, ClientState state)
+        {
+            ClientStateChangeEvent?.Invoke(this, client, state);
+        }
+
         public void Dispose()
         {
             if (!IsDisposed)
@@ -73,11 +91,13 @@ namespace LightRAT.Core.Network
                 InternalSocket.Disconnect(false);
                 InternalSocket.Shutdown(SocketShutdown.Both);
                 InternalSocket.Dispose();
+
                 foreach (var client in ConnectedClients)
-                {
-                    client.ReceiveDataEvent -= this.ReceiveDataEvent;
-                    client.Dispose();
-                }
+                    RemoveClient(client);
+
+                AllowedAccounts.RemoveRange(0, AllowedAccounts.Count);
+
+                AllowedAccounts = null;
                 ConnectedClients = null;
                 IsDisposed = true;
             }
