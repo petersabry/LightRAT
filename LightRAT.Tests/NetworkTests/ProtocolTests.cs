@@ -32,11 +32,11 @@ namespace LightRAT.Tests.NetworkTests
             byte[] framedData = MessageFramingProtocol.Frame(data);
             byte[] receivedData = null;
             var protocol = new MessageFramingProtocol(20);
-            protocol.DataReceivedEvent += (recevied) => receivedData = recevied;
+            protocol.DataReceivedEvent += (received) => receivedData = received;
 
             protocol.Read(framedData);
 
-            Assert.AreEqual(receivedData, data);
+            Assert.AreEqual(data, receivedData);
         }
         [Test]
         public void Read_PassingHighSizeData_ReturnsTheSameData()
@@ -46,11 +46,11 @@ namespace LightRAT.Tests.NetworkTests
             byte[] framedData = MessageFramingProtocol.Frame(data);
             byte[] receivedData = null;
             var protocol = new MessageFramingProtocol(20 * 1024 * 1024);
-            protocol.DataReceivedEvent += (recevied) => receivedData = recevied;
+            protocol.DataReceivedEvent += (received) => receivedData = received;
 
             protocol.Read(framedData);
 
-            Assert.AreEqual(receivedData, data);
+            Assert.AreEqual(data, receivedData);
         }
         [Test] 
         public void Read_PassingHighSizeDataWithNetworkSimulation_ReturnsTheSameData()
@@ -60,7 +60,7 @@ namespace LightRAT.Tests.NetworkTests
             byte[] framedData = MessageFramingProtocol.Frame(data);
             byte[] receivedData = null;
             var protocol = new MessageFramingProtocol(20 * 1024 * 1024);
-            protocol.DataReceivedEvent += (recevied) => receivedData = recevied;
+            protocol.DataReceivedEvent += (received) => receivedData = received;
 
             using (var ms = new MemoryStream(framedData))
             {
@@ -75,6 +75,48 @@ namespace LightRAT.Tests.NetworkTests
             }
 
             Assert.AreEqual(data, receivedData);
+        }
+        [Test]
+        public void Read_DataBelongsToTheNextPacket_ReturnsTheSameDataOfTheFirstPacket_StartsNewSessionAndReturnsTheDataOfTheSecondPacket()
+        {
+            byte[] dataOne = { 0, 1, 2 };
+            byte[] dataTwo = { 3, 4, 5 };
+
+            byte[] finalBytes = new byte[dataOne.Length + dataTwo.Length];
+            dataOne.CopyTo(finalBytes, 0);
+            dataTwo.CopyTo(finalBytes, dataOne.Length);
+
+
+            byte[] framedDataOne = MessageFramingProtocol.Frame(dataOne);
+            byte[] framedDataTwo = MessageFramingProtocol.Frame(dataTwo);
+
+            byte[] finalFramedBytes = new byte[framedDataOne.Length + framedDataTwo.Length];
+            framedDataOne.CopyTo(finalFramedBytes, 0);
+            framedDataTwo.CopyTo(finalFramedBytes, framedDataOne.Length);
+
+            byte[] receivedData = null;
+            var protocol = new MessageFramingProtocol(20);
+            protocol.DataReceivedEvent += (received) =>
+            {
+
+               if (receivedData == null) receivedData = received;
+                else received.FlexCopyTo<byte>(ref receivedData);
+            };
+            protocol.Read(finalFramedBytes);
+
+            Assert.AreEqual(finalBytes, receivedData);
+        }
+
+
+
+    }
+    public  static class ArrayExtensions
+    {
+        public static void FlexCopyTo<T>(this T[] array, ref T[] destArray)
+        {
+            int count = destArray.Count();
+            Array.Resize(ref destArray, count + array.Length);
+            array.CopyTo(destArray, count);
         }
     }
 }

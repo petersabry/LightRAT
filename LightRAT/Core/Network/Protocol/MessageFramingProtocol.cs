@@ -2,16 +2,18 @@
 using System.IO;
 using System.Net;
 
+
 namespace LightRAT.Core.Network.Protocol
 {
     public class MessageFramingProtocol
     {
         private readonly int _maxBufferLength;
 
-        private byte[] buffer;
-        private byte[] bufferLength = BitConverter.GetBytes(sizeof(int));
-        private int receivedData;
-        private ReceivingMode receivingMode = ReceivingMode.Header;
+        private byte[] _buffer;
+        private byte[] _bufferLength = BitConverter.GetBytes(sizeof(int));
+        private int _receivedData;
+        private ReceivingMode _receivingMode = ReceivingMode.Header;
+        private int _readingOffset;
 
         public MessageFramingProtocol(int maxBufferLength)
         {
@@ -22,49 +24,40 @@ namespace LightRAT.Core.Network.Protocol
 
         public void Read(byte[] data)
         {
-            byte[] readingBufferHolder = null;
-            var dataLength = 0;
+            byte[] readingBufferHolder;
+            int dataLength;
 
-            if (receivingMode == ReceivingMode.Header)
+            if (_receivingMode == ReceivingMode.Header)
             {
-                readingBufferHolder = bufferLength;
-                dataLength = bufferLength.Length;
+                readingBufferHolder = _bufferLength;
+                dataLength = _bufferLength.Length;
             }
             else
             {
-                readingBufferHolder = buffer;
+                readingBufferHolder = _buffer;
 
-                var remainingDataLength = buffer.Length - receivedData;
+                var remainingDataLength = _buffer.Length - _receivedData;
 
                 // we need to know if the incoming data is smaller than the needed data or not, if so we will read it all.
                 dataLength = Math.Min(remainingDataLength, data.Length);
+
+                // this mainly used to skip the header
+                if (dataLength != remainingDataLength)
+                    dataLength -= _readingOffset;
             }
 
-            // if the buffer is null that means we will read the header (the first of the packet)
-            // or if the receieved data doesn't equal the desired amout, we will also read from the start beacuse that means we received new data
-            // if not we will read after the header
-            var readingOffset = buffer == null || receivedData != data.Length && receivedData > 0
-                ? 0
-                : bufferLength.Length;
-
-            // to skip the header while reading the first packet
-            dataLength = buffer != null && receivedData == 0 ? data.Length - bufferLength.Length : dataLength;
-
-            using (var bufferMemoryStream = new MemoryStream(readingBufferHolder, receivedData, dataLength)
-            ) // to write data starting from the last index
-            using (var dataMemoryStream = new MemoryStream(data, readingOffset, dataLength, false))
-            {
-                dataMemoryStream.WriteTo(bufferMemoryStream);
-            }
+            using (var bufferMemoryStream = new MemoryStream(readingBufferHolder, _receivedData, dataLength))
+                using (var dataMemoryStream = new MemoryStream(data, _readingOffset, dataLength, false))
+                        dataMemoryStream.WriteTo(bufferMemoryStream);
 
             ReadCompeleted(dataLength, ref data);
         }
 
         private void ReadCompeleted(int dataLength, ref byte[] data)
         {
-            if (receivingMode == ReceivingMode.Header)
+            if (_receivingMode == ReceivingMode.Header)
             {
-                var length = BitConverter.ToInt32(bufferLength, 0);
+                var length = BitConverter.ToInt32(_bufferLength, 0);
 
                 if (length < 0)
                     throw new ProtocolViolationException("length cannot be less than zero");
@@ -72,28 +65,61 @@ namespace LightRAT.Core.Network.Protocol
                 if (length > _maxBufferLength)
                     throw new ProtocolViolationException("the data length is greater than the maximum value.");
 
-                buffer = new byte[length];
-                receivingMode = ReceivingMode.Packet;
+                _buffer = new byte[length];
+                _receivingMode = ReceivingMode.Packet;
+                _readingOffset += _bufferLength.Length;
+
                 Read(data);
             }
             else
             {
-                receivedData += dataLength;
+                _receivedData += dataLength;
 
-                if (receivedData == buffer.Length)
+                if (_receivedData == _buffer.Length)
                 {
-                    DataReceivedEvent(buffer);
-                    Reset();
+                    DataReceivedEvent?.Invoke(_buffer);
+                    if (CheckIfThereIsAnotherPacket(data))
+                    {
+                        Reset();
+                        _readingOffset += dataLength;
+                        Read(data);
+                    }
+                    else
+                    {
+                        Reset();
+                    }
                 }
+                
+                // we don't want to reset the offset until we read the rest of the data * another packet *
+                _readingOffset = 0;
+
             }
         }
 
         private void Reset()
         {
-            buffer = null;
-            bufferLength = BitConverter.GetBytes(sizeof(int));
-            receivingMode = ReceivingMode.Header;
-            receivedData = 0;
+            _buffer = null;
+            _bufferLength = BitConverter.GetBytes(sizeof(int));
+            _receivingMode = ReceivingMode.Header;
+            _receivedData = 0;
+        }
+
+        private bool CheckIfThereIsAnotherPacket(byte[] data)
+        {
+            int dataLastIndex = data.Length - 1;
+            int bufferLastIndex = _buffer.Length - 1;
+
+            if (bufferLastIndex + _bufferLength.Length == dataLastIndex)
+                return false;
+
+            int checkLength = Math.Min(_buffer.Length, 4);
+
+            // checks the last 4 bytes
+            for (int i = 0; i < checkLength; i++)
+                if (data[dataLastIndex - i] != _buffer[bufferLastIndex - i])
+                    return true;
+
+            return false;
         }
 
         public static byte[] Frame(byte[] data)
@@ -103,17 +129,13 @@ namespace LightRAT.Core.Network.Protocol
 
             var lengthInBytes = BitConverter.GetBytes(data.Length);
             var framedData = new byte[lengthInBytes.Length + data.Length];
-            using (var frameDataMS = new MemoryStream(framedData))
+            using (var frameDataMs = new MemoryStream(framedData))
             {
-                using (var lengthMS = new MemoryStream(lengthInBytes))
-                {
-                    lengthMS.WriteTo(frameDataMS);
-                }
+                using (var lengthMs = new MemoryStream(lengthInBytes))
+                    lengthMs.WriteTo(frameDataMs);
 
-                using (var dataMS = new MemoryStream(data))
-                {
-                    dataMS.WriteTo(frameDataMS);
-                }
+                using (var dataMs = new MemoryStream(data))
+                    dataMs.WriteTo(frameDataMs);
             }
 
             return framedData;

@@ -46,6 +46,7 @@
   <ItemGroup>
     <Compile Include="Core\Data\Account.cs" />
     <Compile Include="Core\Extensions\NetSerializerExtensions.cs" />
+    <Compile Include="Core\Extensions\StreamExtensions.cs" />
     <Compile Include="Core\Network\Client.cs" />
     <Compile Include="Core\Network\ClientState.cs" />
     <Compile Include="Core\Engine\CryptEngine.cs" />

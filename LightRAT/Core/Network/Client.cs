@@ -82,7 +82,7 @@ namespace LightRAT.Core.Network
 
         public void SendPacket(IPacket packet)
         {
-            byte[] buffer = null;
+            byte[] buffer;
 
             using (var ms = new MemoryStream())
             {
