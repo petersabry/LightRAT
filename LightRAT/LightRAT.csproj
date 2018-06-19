@@ -48,10 +48,13 @@
     <Compile Include="Extensions\NetSerializerExtensions.cs" />
     <Compile Include="Network\Client.cs" />
     <Compile Include="Engine\CryptEngine.cs" />
+    <Compile Include="Network\EventArgs\ClientStateChangeArgs.cs" />
     <Compile Include="Network\EventArgs\ReceiveDataArgs.cs" />
     <Compile Include="Network\NetworkSizes.cs" />
     <Compile Include="Network\Packets\AuthenticationPacket.cs" />
+    <Compile Include="Network\Packets\PacketType.cs" />
     <Compile Include="Network\Packets\Factory\PacketFactory.cs" />
+    <Compile Include="Network\Packets\InformationPacket.cs" />
     <Compile Include="Network\Packets\IPacket.cs" />
     <Compile Include="Network\Protocol\MessageFramingProtocol.cs" />
     <Compile Include="Network\Protocol\ReceivingMode.cs" />

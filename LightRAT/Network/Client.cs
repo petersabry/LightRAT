@@ -6,7 +6,6 @@ using LightRAT.Engine;
 using LightRAT.Network.Protocol;
 using LightRAT.Network.Packets;
 using LightRAT.Network;
-using LightRAT.Network.EventArgs;
 
 namespace LightRAT.Network
 {
@@ -18,9 +17,10 @@ namespace LightRAT.Network
         public Socket ClientSocket { get; private set; }
         public bool IsDisposed { get; private set; }
         public bool IsConnected => !(ClientSocket.Poll(1000, SelectMode.SelectRead) && ClientSocket.Available == 0);
+        public string NetworkId { get; set; }
 
         public event EventHandler<ReceivePacketArgs> OnPacketReceive;
-        public event EventHandler OnDisconnect;
+        public event EventHandler<ClientStateChangeArgs> OnDisconnect;
 
         public Client(Socket socket)
         {

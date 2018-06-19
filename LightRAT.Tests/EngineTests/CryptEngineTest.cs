@@ -1,5 +1,5 @@
 ﻿using NUnit.Framework;
-using LightRAT.Core.Engine;
+using LightRAT.Engine;
 using System.Text;
 
 namespace LightRAT.Tests.EngineTests

