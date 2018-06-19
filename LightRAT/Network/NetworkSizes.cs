@@ -1,4 +1,4 @@
-﻿namespace LightRAT.Core.Network
+﻿namespace LightRAT.Network
 {
     public struct NetworkSizes
     {

@@ -1,4 +1,4 @@
-﻿namespace LightRAT.Core.Network.Packets
+﻿namespace LightRAT.Network.Packets
 {
     public interface IPacket
     {

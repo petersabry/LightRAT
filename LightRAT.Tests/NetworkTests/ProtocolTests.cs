@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Linq;
 using NUnit.Framework;
-using LightRAT.Core.Network.Protocol;
+using LightRAT.Network.Protocol;
 using System.Threading;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace LightRAT.Tests.NetworkTests
 {
@@ -32,12 +33,13 @@ namespace LightRAT.Tests.NetworkTests
             byte[] framedData = MessageFramingProtocol.Frame(data);
             byte[] receivedData = null;
             var protocol = new MessageFramingProtocol(20);
-            protocol.DataReceivedEvent += (received) => receivedData = received;
+            protocol.DataReceivedEvent += (receive) => Task.Run(() => receivedData = receive);
 
             protocol.Read(framedData);
 
             Assert.AreEqual(data, receivedData);
         }
+
         [Test]
         public void Read_PassingHighSizeData_ReturnsTheSameData()
         {
@@ -46,7 +48,7 @@ namespace LightRAT.Tests.NetworkTests
             byte[] framedData = MessageFramingProtocol.Frame(data);
             byte[] receivedData = null;
             var protocol = new MessageFramingProtocol(20 * 1024 * 1024);
-            protocol.DataReceivedEvent += (received) => receivedData = received;
+            protocol.DataReceivedEvent += (receive) => Task.Run(() => receivedData = receive);
 
             protocol.Read(framedData);
 
@@ -60,7 +62,7 @@ namespace LightRAT.Tests.NetworkTests
             byte[] framedData = MessageFramingProtocol.Frame(data);
             byte[] receivedData = null;
             var protocol = new MessageFramingProtocol(20 * 1024 * 1024);
-            protocol.DataReceivedEvent += (received) => receivedData = received;
+            protocol.DataReceivedEvent += (receive) => Task.Run(() => receivedData = receive);
 
             using (var ms = new MemoryStream(framedData))
             {
@@ -96,12 +98,12 @@ namespace LightRAT.Tests.NetworkTests
 
             byte[] receivedData = null;
             var protocol = new MessageFramingProtocol(20);
-            protocol.DataReceivedEvent += (received) =>
+            protocol.DataReceivedEvent += (received) => Task.Run(() =>
             {
 
-               if (receivedData == null) receivedData = received;
+                if (receivedData == null) receivedData = received;
                 else received.FlexCopyTo<byte>(ref receivedData);
-            };
+            });
             protocol.Read(finalFramedBytes);
 
             Assert.AreEqual(finalBytes, receivedData);

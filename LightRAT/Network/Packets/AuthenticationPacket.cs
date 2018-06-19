@@ -1,7 +1,7 @@
 ﻿using System;
-using LightRAT.Core.Data;
+using LightRAT.Data;
 
-namespace LightRAT.Core.Network.Packets
+namespace LightRAT.Network.Packets
 {
     [Serializable]
     public class AuthenticationPacket : IPacket

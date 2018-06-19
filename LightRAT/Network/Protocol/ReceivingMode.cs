@@ -1,4 +1,4 @@
-﻿namespace LightRAT.Core.Network.Protocol
+﻿namespace LightRAT.Network.Protocol
 {
     public enum ReceivingMode
     {
